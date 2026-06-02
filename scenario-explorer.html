@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Seattle Scenario Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg:#FFFFFF; --bg2:#F5F5F7; --cream:#F7F5F0; --cream-2:#EFECE4;
+    --text:#1D1D1F; --text-2:#6E6E73; --text-3:#AEAEB2;
+    --border:#D2D2D7; --border2:#E8E8ED;
+    --sage:#4A6B52; --sage-2:#6B8A72; --sage-soft:#DCE6DE; --sage-bg:#EFF4F0;
+    --warn:#B85C3A; --warn-soft:#F5E8E0; --blue:#41607D;
+  }
+  html,body{ background:var(--bg); color:var(--text); font-family:'Poppins',-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+  body{ padding:2px; }
+
+  .explorer{ background:var(--bg); border:1px solid var(--border2); border-radius:20px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+
+  /* header */
+  .eh{ padding:22px 28px 20px; background:#1D1D1F; color:#fff; }
+  .eh-lbl{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.42); margin-bottom:9px; }
+  .eh h3{ font-size:18px; font-weight:500; line-height:1.32; letter-spacing:-.01em; color:#fff; max-width:600px; }
+
+  /* lens tabs */
+  .lenses{ display:flex; gap:2px; padding:6px; background:var(--bg2); border-bottom:1px solid var(--border2); }
+  .lens{ flex:1; font-family:'Poppins',sans-serif; font-size:13px; font-weight:500; letter-spacing:-.01em; color:var(--text-2);
+    background:none; border:none; cursor:pointer; padding:11px 8px; border-radius:9px; transition:all .18s; line-height:1.2; }
+  .lens:hover{ color:var(--text); }
+  .lens.active{ background:#fff; color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.07); font-weight:600; }
+
+  /* body: readout + stage */
+  .body{ display:grid; grid-template-columns:0.82fr 1.18fr; gap:0; }
+  .readout{ padding:26px 28px; border-right:1px solid var(--border2); display:flex; flex-direction:column; min-height:288px; }
+  .ro-lbl{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); margin-bottom:14px; }
+  .ro-value{ font-family:'Poppins',sans-serif; font-size:58px; font-weight:600; line-height:.96; letter-spacing:-.03em; color:var(--sage); font-variant-numeric:tabular-nums; transition:color .3s; }
+  .ro-value .u{ font-size:24px; font-weight:500; color:var(--text-3); letter-spacing:-.01em; margin-left:2px; }
+  .ro-value.pulse{ animation:roPulse .5s ease; }
+  @keyframes roPulse{ 0%{ transform:scale(1); } 30%{ transform:scale(1.045); } 100%{ transform:scale(1); } }
+  .ro-range{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-3); margin-top:12px; letter-spacing:.01em; }
+  .ro-mean{ margin-top:auto; padding-top:20px; }
+  .ro-mean-k{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; }
+  .ro-mean-t{ font-size:14px; line-height:1.55; color:var(--text); font-weight:400; }
+  .ro-mean-t b{ font-weight:600; color:var(--sage); }
+
+  .stage{ position:relative; min-height:288px; background:var(--cream); }
+  .layer{ position:absolute; inset:0; padding:22px 26px; display:none; flex-direction:column; }
+  .layer.on{ display:flex; animation:layerIn .35s ease; }
+  @keyframes layerIn{ from{ opacity:0; } to{ opacity:1; } }
+  .layer-title{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-2); margin-bottom:4px; }
+  .layer-sub{ font-size:11.5px; color:var(--text-3); line-height:1.45; margin-bottom:14px; }
+  canvas{ display:block; }
+
+  /* speed chart legend */
+  .chart-legend{ display:flex; gap:18px; margin-bottom:10px; flex-wrap:wrap; }
+  .leg{ display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--text-2); }
+  .leg-dot{ width:13px; height:3px; border-radius:2px; }
+
+  /* street cross-section */
+  .street-canvas{ width:100%; flex:1; min-height:120px; background:#CFC9BC; border-radius:12px; border:1px solid var(--cream-2); display:flex; overflow:hidden; }
+  .lane{ height:100%; display:flex; align-items:center; justify-content:center; transition:width .55s cubic-bezier(.4,0,.2,1), background .4s; }
+  .lane-label{ font-size:9px; font-family:'JetBrains Mono',monospace; writing-mode:vertical-rl; letter-spacing:.08em; font-weight:500; opacity:.7; }
+  .lane.car{ background:#6E6A63; } .lane.car .lane-label{ color:rgba(255,255,255,.6); }
+  .lane.bike{ background:var(--sage); } .lane.bike .lane-label{ color:rgba(255,255,255,.75); }
+  .lane.walk{ background:#D8C9A6; } .lane.walk .lane-label{ color:rgba(60,50,30,.65); }
+  .lane.green{ background:var(--sage-2); } .lane.green .lane-label{ color:rgba(255,255,255,.8); }
+  .street-legend{ display:flex; gap:16px; margin-top:13px; flex-wrap:wrap; }
+  .sl-item{ display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--text-2); }
+  .sl-dot{ width:11px; height:11px; border-radius:3px; }
+
+  /* slider dock */
+  .dock{ padding:22px 28px 20px; border-top:1px solid var(--border2); }
+  .dock-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; }
+  .dock-label{ font-size:13px; font-weight:600; letter-spacing:-.01em; }
+  .dock-label span{ font-weight:400; color:var(--text-2); }
+  .dock-pct{ font-family:'Poppins',sans-serif; font-size:22px; font-weight:600; color:var(--sage); letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .dock-pct .u{ font-size:14px; color:var(--text-3); font-weight:500; }
+  input[type=range]{ width:100%; -webkit-appearance:none; appearance:none; height:3px; background:var(--border); border-radius:2px; outline:none; margin-bottom:9px; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:24px; height:24px; background:var(--sage); border-radius:50%; cursor:pointer; box-shadow:0 0 0 5px var(--sage-bg); border:2.5px solid #fff; transition:box-shadow .2s; }
+  input[type=range]::-webkit-slider-thumb:hover{ box-shadow:0 0 0 9px var(--sage-bg); }
+  input[type=range]::-moz-range-thumb{ width:20px; height:20px; background:var(--sage); border-radius:50%; cursor:pointer; border:2.5px solid #fff; }
+  .ticks{ display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-3); }
+
+  /* uncertainty footer */
+  .unc{ margin:0 28px 22px; padding:12px 16px; background:var(--warn-soft); border:1px solid rgba(184,92,58,.2); border-radius:11px; font-size:12px; color:#6A4030; line-height:1.55; }
+  .unc b{ font-weight:600; }
+  details summary{ cursor:pointer; color:var(--warn); font-size:12px; margin-top:6px; font-weight:500; list-style:none; }
+  details summary::-webkit-details-marker{ display:none; }
+  details p{ margin-top:7px; color:var(--text-2); font-size:11.5px; line-height:1.6; }
+
+  @media (max-width:720px){
+    .body{ grid-template-columns:1fr; }
+    .readout{ border-right:none; border-bottom:1px solid var(--border2); min-height:0; }
+    .stage{ min-height:260px; }
+    .ro-value{ font-size:48px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="explorer">
+  <div class="eh">
+    <div class="eh-lbl">Seattle Scenario Explorer</div>
+    <h3>If a share of car commuters shifted to Link Light Rail or King County Metro, what would change?</h3>
+  </div>
+
+  <div class="lenses" id="lenses">
+    <button class="lens active" data-lens="vehicles">Vehicles removed</button>
+    <button class="lens" data-lens="speed">Rush-hour speed</button>
+    <button class="lens" data-lens="street">Street space</button>
+  </div>
+
+  <div class="body">
+    <div class="readout">
+      <div class="ro-lbl" id="roLbl">Est. vehicles removed / day</div>
+      <div class="ro-value" id="roValue">0</div>
+      <div class="ro-range" id="roRange">move the slider to explore</div>
+      <div class="ro-mean">
+        <div class="ro-mean-k">What this means</div>
+        <div class="ro-mean-t" id="roMean">At 0% shift, today's traffic is unchanged.</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <!-- VEHICLES lens: flowing freeway -->
+      <div class="layer on" data-lens="vehicles">
+        <div class="layer-title">I-90 &amp; SR-520 · peak flow</div>
+        <div class="layer-sub">Each mark is a vehicle on the corridor. Buses carry shifted commuters.</div>
+        <canvas id="flowCanvas"></canvas>
+      </div>
+
+      <!-- SPEED lens: line chart -->
+      <div class="layer" data-lens="speed">
+        <div class="layer-title">Avg weekday speed by hour <span style="color:var(--text-3)">· WSDOT loop detectors 2015</span></div>
+        <div class="chart-legend">
+          <div class="leg"><div class="leg-dot" style="background:#4A6B52"></div>I-90</div>
+          <div class="leg"><div class="leg-dot" style="background:#B85C3A"></div>SR-520</div>
+          <div class="leg"><div class="leg-dot" style="background:rgba(184,92,58,.3);height:11px;width:11px;border-radius:3px"></div>Rush hours</div>
+        </div>
+        <canvas id="speedCanvas"></canvas>
+      </div>
+
+      <!-- STREET lens: cross-section -->
+      <div class="layer" data-lens="street">
+        <div class="layer-title">Cross-section reallocation · MLK Jr Way S</div>
+        <div class="layer-sub">Illustrative: freed roadway becomes bike lanes, sidewalks, and green space.</div>
+        <div class="street-canvas" id="streetRow"></div>
+        <div class="street-legend">
+          <div class="sl-item"><div class="sl-dot" style="background:#6E6A63"></div>Car lane</div>
+          <div class="sl-item"><div class="sl-dot" style="background:#4A6B52"></div>Bike lane</div>
+          <div class="sl-item"><div class="sl-dot" style="background:#D8C9A6"></div>Sidewalk</div>
+          <div class="sl-item"><div class="sl-dot" style="background:#6B8A72"></div>Green space</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dock">
+    <div class="dock-head">
+      <div class="dock-label">Transit shift <span>· share of car commuters moving to transit</span></div>
+      <div class="dock-pct"><span id="dockNum">0</span><span class="u">%</span></div>
+    </div>
+    <input type="range" id="slider" min="0" max="50" value="0" step="1" />
+    <div class="ticks"><span>0%</span><span>10%</span><span>20%</span><span>30%</span><span>40%</span><span>50%</span></div>
+  </div>
+
+  <div class="unc">
+    <b>Illustrative estimates, not predictions.</b> Speed modeled as proportional to vehicle reduction; street reallocation is illustrative.
+    <details>
+      <summary>View assumptions →</summary>
+      <p>I-90 baseline rush speed: 47.6 mph (7–9am weekdays, 2015). SR-520: 53.6 mph. Baseline daily vehicles: ~150,000 (I-90 + SR-520). Seattle car commuters: ~250,000 (ACS 2019). Does not account for induced demand, trip-chaining, or seasonal variation. Source: Seattle Freeway Loop Detector Dataset, UW STAR Lab / WSDOT 2015.</p>
+    </details>
+  </div>
+</div>
+
+<script>
+const I90_BY_HOUR  = {0:61.9,1:60.4,2:59.9,3:58.8,4:60.7,5:63.3,6:60.7,7:49.2,8:46.0,9:52.5,10:56.6,11:57.2,12:57.6,13:57.5,14:56.4,15:51.8,16:43.3,17:42.6,18:52.0,19:61.1,20:63.4,21:63.3,22:63.8,23:63.4};
+const SR520_BY_HOUR = {0:62.4,1:61.4,2:60.7,3:61.1,4:62.4,5:63.0,6:62.1,7:57.0,8:50.3,9:54.1,10:59.3,11:59.9,12:59.7,13:59.9,14:59.6,15:57.6,16:51.1,17:49.5,18:54.5,19:61.6,20:63.7,21:63.2,22:63.3,23:63.3};
+const I90_RUSH_BASE = 47.6;
+const SAGE='#4A6B52', TERRA='#B85C3A';
+const TOTAL_COMMUTERS=250000, BASELINE_VEHICLES=150000, SQFT=150;
+const fmt=n=>n.toLocaleString('en-US');
+
+let activeLens='vehicles';
+let pct=0;
+
+/* ---------- LENS TABS ---------- */
+document.querySelectorAll('.lens').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeLens=btn.dataset.lens;
+    document.querySelectorAll('.lens').forEach(b=>b.classList.toggle('active',b===btn));
+    document.querySelectorAll('.layer').forEach(l=>l.classList.toggle('on',l.dataset.lens===activeLens));
+    updateReadout(true);
+    if(activeLens==='speed') drawSpeedChart(pct);
+    if(activeLens==='street') buildStreet(pct);
+  });
+});
+
+/* ---------- READOUT ---------- */
+const elVal=document.getElementById('roValue');
+const elLbl=document.getElementById('roLbl');
+const elRange=document.getElementById('roRange');
+const elMean=document.getElementById('roMean');
+
+function updateReadout(pulse){
+  const commuters=Math.round(TOTAL_COMMUTERS*pct/100);
+  const vehicles=Math.round(BASELINE_VEHICLES*pct/100);
+  const space=Math.round(vehicles*SQFT);
+  const speedBoost=(pct/50)*12;
+  const newSpeed=(I90_RUSH_BASE+speedBoost);
+
+  if(activeLens==='vehicles'){
+    elLbl.textContent='Est. vehicles removed / day';
+    elVal.style.color=SAGE;
+    elVal.innerHTML=fmt(vehicles);
+    if(pct===0){ elRange.textContent='on I-90 & SR-520 combined'; elMean.innerHTML='At <b>0% shift</b>, today\u2019s traffic is unchanged.'; }
+    else{ const lo=Math.round(vehicles*0.75), hi=Math.round(vehicles*1.25);
+      elRange.textContent=`est. range ${fmt(lo)} – ${fmt(hi)} / day`;
+      elMean.innerHTML=`About <b>${fmt(commuters)} commuters</b> shifting clears roughly <b>${fmt(vehicles)} cars</b> from the peak each day.`; }
+  } else if(activeLens==='speed'){
+    elLbl.textContent='Est. rush-hour speed · I-90';
+    elVal.style.color=TERRA;
+    elVal.innerHTML=`${newSpeed.toFixed(1)}<span class="u">mph</span>`;
+    if(pct===0){ elRange.textContent='baseline · 47.6 mph (7–9am, 2015)'; elMean.innerHTML='Peak speed sits at its <b>2015 baseline</b> of 47.6 mph.'; }
+    else{ elRange.textContent=`+${speedBoost.toFixed(1)} mph over 47.6 baseline (est.)`;
+      elMean.innerHTML=`Lighter peak traffic lifts modeled rush speed from <b>47.6</b> to <b>${newSpeed.toFixed(1)} mph</b>.`; }
+  } else {
+    elLbl.textContent='Street space freed';
+    elVal.style.color=SAGE;
+    elVal.innerHTML=pct===0?'0<span class="u">sqft</span>':`${fmt(space)}<span class="u">sqft</span>`;
+    if(pct===0){ elRange.textContent='could become bike lanes, sidewalks, or green space'; elMean.innerHTML='No roadway is freed at <b>0% shift</b>.'; }
+    else{ const acres=Math.max(1,Math.round(space/43560));
+      elRange.textContent=`\u2248 ${Math.round(space/1000)}k sqft of reclaimable roadway`;
+      elMean.innerHTML=`Roughly <b>${acres} acre${acres>1?'s':''}</b> of roadway that could become sidewalks, bike lanes, or greenery.`; }
+  }
+  if(pulse!==true){ elVal.classList.remove('pulse'); void elVal.offsetWidth; elVal.classList.add('pulse'); }
+}
+
+/* ---------- VEHICLE FLOW (animated) ---------- */
+const flow=document.getElementById('flowCanvas');
+const fctx=flow.getContext('2d');
+let fW=0,fH=0, lanesY=[], vehicles=[], lastSpawn=0;
+function sizeFlow(){
+  const dpr=window.devicePixelRatio||1;
+  const host=flow.parentElement;
+  fW=host.clientWidth-52; if(fW<10) fW=380;
+  fH=host.clientHeight-72; if(fH<60) fH=180;
+  flow.width=fW*dpr; flow.height=fH*dpr; flow.style.width=fW+'px'; flow.style.height=fH+'px';
+  fctx.setTransform(dpr,0,0,dpr,0,0);
+  const n=4; lanesY=[];
+  const top=10, usable=fH-20, gap=usable/n;
+  for(let i=0;i<n;i++) lanesY.push(top+gap*i+gap/2);
+}
+function spawnVehicle(){
+  const carChance=1-(pct/50)*0.7;
+  const lane=Math.floor(Math.random()*lanesY.length);
+  const isBus = Math.random() < (pct/50)*0.45;
+  if(!isBus && Math.random()>carChance) return;
+  vehicles.push({
+    x:-30, y:lanesY[lane],
+    w:isBus?34:15, h:isBus?9:7,
+    sp:isBus?0.9:(1.3+Math.random()*0.7),
+    bus:isBus,
+    col:isBus?SAGE:`rgba(90,80,70,${0.55+Math.random()*0.3})`
+  });
+}
+function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function drawFlow(ts){
+  if(fW<10||fH<60) sizeFlow();
+  fctx.clearRect(0,0,fW,fH);
+  fctx.fillStyle='#46433E'; fctx.fillRect(0,4,fW,fH-8);
+  fctx.strokeStyle='rgba(255,255,255,.16)'; fctx.lineWidth=1; fctx.setLineDash([10,12]);
+  for(let i=1;i<lanesY.length;i++){ const y=(lanesY[i-1]+lanesY[i])/2; fctx.beginPath(); fctx.moveTo(0,y); fctx.lineTo(fW,y); fctx.stroke(); }
+  fctx.setLineDash([]);
+  if(ts-lastSpawn > 90){ lastSpawn=ts; spawnVehicle(); spawnVehicle(); }
+  for(let i=vehicles.length-1;i>=0;i--){
+    const v=vehicles[i]; v.x+=v.sp;
+    if(v.x>fW+40){ vehicles.splice(i,1); continue; }
+    fctx.fillStyle=v.col;
+    roundRect(fctx,v.x,v.y-v.h/2,v.w,v.h,2); fctx.fill();
+    if(v.bus){
+      fctx.fillStyle='rgba(255,255,255,.32)';
+      for(let wx=v.x+4; wx<v.x+v.w-4; wx+=7) fctx.fillRect(wx,v.y-v.h/2+1.5,3,2.5);
+    } else {
+      fctx.fillStyle='rgba(170,200,210,.4)';
+      fctx.fillRect(v.x+v.w*0.55,v.y-v.h/2+1,v.w*0.28,v.h-2);
+    }
+  }
+}
+/* one persistent loop; only paints when the vehicles lens is showing */
+function tick(ts){ if(activeLens==='vehicles') drawFlow(ts||0); requestAnimationFrame(tick); }
+
+/* ---------- SPEED CHART ---------- */
+const speedC=document.getElementById('speedCanvas');
+function drawSpeedChart(shiftPct){
+  const dpr=window.devicePixelRatio||1;
+  const host=speedC.parentElement;
+  const W=Math.max(160,host.clientWidth-52), H=Math.max(140,host.clientHeight-110);
+  speedC.width=W*dpr; speedC.height=H*dpr; speedC.style.width=W+'px'; speedC.style.height=H+'px';
+  const ctx=speedC.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const pad={t:8,r:14,b:24,l:34}, cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  const hours=Array.from({length:24},(_,i)=>i), sMin=38,sMax=68;
+  [[7,9],[16,18]].forEach(([s,e])=>{ ctx.fillStyle='rgba(184,92,58,0.07)'; const x1=pad.l+(s/23)*cw,x2=pad.l+(e/23)*cw; ctx.fillRect(x1,pad.t,x2-x1,ch); });
+  ctx.strokeStyle='#E5DECF'; ctx.lineWidth=1; ctx.font='9px "JetBrains Mono",monospace'; ctx.fillStyle='#AEAEB2'; ctx.textAlign='right';
+  [40,50,60].forEach(sp=>{ const y=pad.t+ch-((sp-sMin)/(sMax-sMin))*ch; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+cw,y); ctx.stroke(); ctx.fillText(sp,pad.l-5,y+3); });
+  ctx.textAlign='center'; ctx.fillStyle='#AEAEB2';
+  [0,6,12,18,23].forEach(h=>{ ctx.fillText(h+'h',pad.l+(h/23)*cw,H-pad.b+15); });
+  function line(byHour,color,sp,proj){
+    ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=proj?2.5:1.4; ctx.setLineDash(proj?[]:[3,3]);
+    hours.forEach((h,i)=>{ const base=byHour[h]; const rush=(h>=7&&h<=9)||(h>=16&&h<=18); const boost=proj?(rush?(sp/50)*12:(sp/50)*4):0; const speed=Math.min(66,base+boost); const x=pad.l+(h/23)*cw, y=pad.t+ch-((speed-sMin)/(sMax-sMin))*ch; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  line(I90_BY_HOUR,'rgba(74,107,82,0.28)',0,false);
+  line(SR520_BY_HOUR,'rgba(184,92,58,0.28)',0,false);
+  if(shiftPct>0){ line(I90_BY_HOUR,SAGE,shiftPct,true); line(SR520_BY_HOUR,TERRA,shiftPct,true); }
+}
+
+/* ---------- STREET CROSS-SECTION ---------- */
+function buildStreet(p){
+  const row=document.getElementById('streetRow'); row.innerHTML='';
+  const carLanes=Math.max(2,Math.round(4-(p/50)*2));
+  const bikeLanes=Math.min(2,Math.round((p/50)*2));
+  const greenLanes=p>=25?1:0;
+  const total=carLanes+bikeLanes+1+1+greenLanes;
+  const make=(type,label)=>{ const d=document.createElement('div'); d.className=`lane ${type}`; d.style.width=`${100/total}%`; const l=document.createElement('span'); l.className='lane-label'; l.textContent=label; d.appendChild(l); return d; };
+  row.appendChild(make('walk','sidewalk'));
+  for(let i=0;i<bikeLanes;i++) row.appendChild(make('bike','bike'));
+  for(let i=0;i<carLanes;i++) row.appendChild(make('car','car'));
+  if(greenLanes) row.appendChild(make('green','green'));
+  row.appendChild(make('walk','sidewalk'));
+}
+
+/* ---------- SLIDER ---------- */
+const slider=document.getElementById('slider');
+const dockNum=document.getElementById('dockNum');
+function update(pulse){
+  pct=parseInt(slider.value);
+  dockNum.textContent=pct;
+  updateReadout(pulse);
+  if(activeLens==='speed') drawSpeedChart(pct);
+  if(activeLens==='street') buildStreet(pct);
+}
+slider.addEventListener('input',()=>update(false));
+
+window.addEventListener('resize',()=>{ sizeFlow(); if(activeLens==='speed') drawSpeedChart(pct); });
+
+/* init */
+function init(){ try{ sizeFlow(); buildStreet(0); drawSpeedChart(0); update(true); }catch(e){ console.warn(e); } }
+requestAnimationFrame(tick);
+init();
+window.addEventListener('load',()=>{ sizeFlow(); if(activeLens==='speed') drawSpeedChart(pct); if(activeLens==='street') buildStreet(pct); });
+requestAnimationFrame(tick);
+
+/* resize the active lens's canvas right after a lens switch (layout just changed) */
+document.getElementById('lenses').addEventListener('click',()=>{ requestAnimationFrame(()=>{ if(activeLens==='vehicles') sizeFlow(); if(activeLens==='speed') drawSpeedChart(pct); }); });
+
+/* auto-resize handshake */
+function postH(){ parent.postMessage({pmViz:'scenario-explorer', h:document.body.scrollHeight}, '*'); }
+window.addEventListener('load',postH);
+new ResizeObserver(postH).observe(document.body);
+</script>
+</body>
+</html>

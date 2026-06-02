@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Aggregate</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F5F5F7; --cream:#F7F5F0; --cream-2:#EFECE4;
+  --text:#1D1D1F; --text-2:#6E6E73; --text-3:#AEAEB2;
+  --border:#D2D2D7; --border2:#E8E8ED;
+  --sage:#4A6B52; --sage-2:#6B8A72; --sage-soft:#DCE6DE; --sage-bg:#EFF4F0;
+  --warn:#B85C3A; --warn-soft:#F5E8E0;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:'Poppins',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:2px}
+
+.card{ background:var(--bg); border:1px solid var(--border2); border-radius:20px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+
+/* header */
+.eh{ padding:22px 28px 20px; background:#1D1D1F; color:#fff; }
+.eh-lbl{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.42); margin-bottom:9px; }
+.eh h3{ font-size:18px; font-weight:500; line-height:1.32; letter-spacing:-.01em; color:#fff; max-width:560px; }
+
+/* body */
+.body{ display:grid; grid-template-columns:0.86fr 1.14fr; }
+.readout{ padding:26px 28px; border-right:1px solid var(--border2); display:flex; flex-direction:column; }
+.ro-lbl{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); margin-bottom:12px; }
+#big-counter{ font-family:'Poppins',sans-serif; font-size:52px; font-weight:600; color:var(--sage); line-height:.9; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.counter-sub{ font-size:12px; letter-spacing:.04em; color:var(--text-3); margin-top:9px; line-height:1.5; font-family:'JetBrains Mono',monospace; }
+
+.ro-mean{ margin-top:24px; padding-top:20px; border-top:1px solid var(--border2); }
+.ann-year{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--warn); margin-bottom:8px; }
+.ann-text{ font-size:14px; color:var(--text); line-height:1.6; min-height:66px; }
+.ann-text b{ font-weight:600; color:var(--sage); }
+
+.people-label{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); margin:auto 0 9px; padding-top:18px; }
+#people-grid{ display:flex; flex-wrap:wrap; gap:5px; }
+.person-chip{ width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:13px; line-height:1; transition:background .4s,border-color .4s; }
+.person-chip.flip{ animation:chipFlip .32s ease; }
+@keyframes chipFlip{ 0%{transform:rotateY(0)} 50%{transform:rotateY(90deg)} 100%{transform:rotateY(0)} }
+
+/* stage: map */
+.stage{ background:var(--cream); padding:22px 24px; display:flex; flex-direction:column; }
+.stage-title{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-2); margin-bottom:4px; }
+.stage-sub{ font-size:11.5px; color:var(--text-3); margin-bottom:13px; }
+#map-wrap{ position:relative; flex:1; min-height:316px; }
+#map-canvas{ width:100%; height:100%; display:block; border-radius:10px; }
+
+/* dock: year slider */
+.dock{ padding:20px 28px 20px; border-top:1px solid var(--border2); }
+.dock-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:13px; }
+.dock-label{ font-size:13px; font-weight:600; letter-spacing:-.01em; }
+.dock-label span{ font-weight:400; color:var(--text-2); }
+#year-display{ font-family:'Poppins',sans-serif; font-size:26px; font-weight:600; color:var(--text); letter-spacing:-.02em; line-height:1; font-variant-numeric:tabular-nums; transition:color .5s; }
+#year-display.future{ color:var(--sage); }
+#year-slider{ width:100%; -webkit-appearance:none; appearance:none; height:3px; background:var(--border); border-radius:2px; outline:none; cursor:pointer; margin-bottom:9px; }
+#year-slider::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:24px; height:24px; border-radius:50%; background:var(--text); cursor:pointer; border:2.5px solid #fff; box-shadow:0 0 0 5px rgba(0,0,0,.06); transition:background .3s,box-shadow .2s; }
+#year-slider.future-thumb::-webkit-slider-thumb{ background:var(--sage); box-shadow:0 0 0 5px var(--sage-bg); }
+#year-slider::-moz-range-thumb{ width:20px; height:20px; border-radius:50%; background:var(--text); cursor:pointer; border:2.5px solid #fff; }
+.ticks{ display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-3); }
+
+#provocation{ text-align:center; font-size:15px; font-weight:500; color:var(--text-2); padding:16px 24px 22px; border-top:1px solid var(--border2); line-height:1.5; letter-spacing:-.01em; }
+
+@media (max-width:720px){
+  .body{ grid-template-columns:1fr; }
+  .readout{ border-right:none; border-bottom:1px solid var(--border2); }
+  #map-wrap{ min-height:280px; }
+  #big-counter{ font-size:44px; }
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="eh">
+    <div class="eh-lbl">The Aggregate · Seattle</div>
+    <h3>One Capitol Hill block, reshaped year by year as individual transit choices accumulate.</h3>
+  </div>
+
+  <div class="body">
+    <div class="readout">
+      <div class="ro-lbl">Transit choices logged</div>
+      <div id="big-counter">0</div>
+      <div class="counter-sub">on this corridor since 2026</div>
+
+      <div class="ro-mean">
+        <div class="ann-year" id="ann-year">2026</div>
+        <div class="ann-text" id="ann-text">Baseline. Street allocated by assumption, not data.</div>
+      </div>
+
+      <div class="people-label">20 people on this corridor</div>
+      <div id="people-grid"></div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-title">Capitol Hill · 12th Ave corridor</div>
+      <div class="stage-sub">Each flowing mark is a transit trip. The street reallocates as choices compound.</div>
+      <div id="map-wrap"><canvas id="map-canvas"></canvas></div>
+    </div>
+  </div>
+
+  <div class="dock">
+    <div class="dock-head">
+      <div class="dock-label">Scrub the timeline <span>· 2026 → 2035</span></div>
+      <div id="year-display">2026</div>
+    </div>
+    <input type="range" id="year-slider" min="0" max="9" value="0" step="1">
+    <div class="ticks"><span>2026</span><span>2029</span><span>2032</span><span>2035</span></div>
+  </div>
+
+  <div id="provocation">This street wasn't designed. It was decided, one commute at a time.</div>
+</div>
+
+<script>
+const YEARS=[2026,2027,2028,2029,2030,2031,2032,2033,2034,2035];
+const yearData=[
+  { year:2026, count:0, people:[20,0,0,0], ann:'Baseline. Street allocated by assumption, not data.', bands:{car:.52,park:.20,bus:0,bike:0,green:0,ped:.28}, dotRate:2, dotColor:'rgba(184,92,58,0.25)' },
+  { year:2027, count:142000, people:[17,2,1,0], ann:'Transit shift reaches <b>12%</b>. Weather friction is the most common override.', bands:{car:.50,park:.18,bus:0,bike:.06,green:0,ped:.26}, dotRate:6, dotColor:'rgba(184,92,58,0.35)' },
+  { year:2028, count:310000, people:[14,3,2,1], ann:'First lane conversion proposal approved. Covered stops installed at 12th &amp; Pike.', bands:{car:.44,park:.14,bus:.08,bike:.08,green:0,ped:.26}, dotRate:12, dotColor:'rgba(107,138,114,0.55)' },
+  { year:2029, count:520000, people:[10,6,3,1], ann:'<b>847</b> weather-friction overrides logged on this block. Parking reduced.', bands:{car:.36,park:.10,bus:.12,bike:.10,green:.06,ped:.26}, dotRate:22, dotColor:'rgba(107,138,114,0.6)' },
+  { year:2030, count:748000, people:[8,8,3,1], ann:'First lane freed. Transit shift: <b>34%</b>. Parking structure flagged half-empty in the model.', bands:{car:.28,park:0,bus:.18,bike:.12,green:.10,ped:.32}, dotRate:35, dotColor:'rgba(74,107,82,0.65)' },
+  { year:2031, count:890000, people:[4,10,4,2], ann:'Second lane conversion. Transit corridor opens. Model predicts parking repurposing by 2033.', bands:{car:.18,park:0,bus:.22,bike:.14,green:.12,ped:.34}, dotRate:50, dotColor:'rgba(74,107,82,0.7)' },
+  { year:2032, count:1010000, people:[2,12,4,2], ann:'Zero private car lanes on pilot blocks. Parking structure begins conversion.', bands:{car:.08,park:0,bus:.26,bike:.16,green:.16,ped:.34}, dotRate:65, dotColor:'rgba(74,107,82,0.75)' },
+  { year:2033, count:1100000, people:[1,12,5,2], ann:'Wide pedestrian zone opens. Former parking is now a weekend market.', bands:{car:.04,park:0,bus:.28,bike:.18,green:.18,ped:.32}, dotRate:80, dotColor:'rgba(74,107,82,0.8)' },
+  { year:2034, count:1160000, people:[1,13,4,2], ann:'Market district activated. Light rail ridership up <b>340%</b> since 2026.', bands:{car:.02,park:0,bus:.30,bike:.18,green:.20,ped:.30}, dotRate:92, dotColor:'rgba(74,107,82,0.82)' },
+  { year:2035, count:1204847, people:[0,14,4,2], ann:'The model recommended this. The city agreed. Former parking is now a <b>weekend market.</b>', bands:{car:0,park:0,bus:.32,bike:.18,green:.22,ped:.28}, dotRate:100, dotColor:'rgba(74,107,82,0.85)' },
+];
+
+const canvas=document.getElementById('map-canvas');
+const ctx=canvas.getContext('2d');
+let W,H;
+function resize(){
+  const wrap=document.getElementById('map-wrap');
+  const rect=wrap.getBoundingClientRect();
+  W=rect.width; H=rect.height;
+  if(W<10||H<10){ W=Math.max(W,360); H=Math.max(H,316); }
+  canvas.width=W*devicePixelRatio; canvas.height=H*devicePixelRatio;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  drawMap(currentBands);
+}
+window.addEventListener('resize',()=>{ resize(); });
+
+const dots=[];
+let currentYearIdx=0, animFrame=null;
+let glowCanvas, glowCtx;
+function initGlow(){ glowCanvas=document.createElement('canvas'); glowCtx=glowCanvas.getContext('2d'); }
+function resizeGlow(){ glowCanvas.width=canvas.width; glowCanvas.height=canvas.height; }
+
+function drawMap(bands){
+  ctx.fillStyle='#EFECE4'; ctx.fillRect(0,0,W,H);
+  const blockColor='#E4DECF', streetColor='#D8CEB8';
+  const streetW=14;
+  const corrW=Math.round(W*0.38), corrX=Math.round((W-corrW)/2);
+  const nBlocksV=5;
+  const totalStreetH=(nBlocksV+1)*streetW;
+  const blockH=Math.round((H-totalStreetH)/nBlocksV);
+  const streetRows=[]; let y=0;
+  for(let r=0;r<=nBlocksV;r++){
+    streetRows.push(y);
+    ctx.fillStyle=streetColor; ctx.fillRect(0,y,W,streetW);
+    ctx.strokeStyle='rgba(21,20,15,0.07)'; ctx.lineWidth=0.8; ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(0,y+streetW/2); ctx.lineTo(W,y+streetW/2); ctx.stroke(); ctx.setLineDash([]);
+    y+=streetW+blockH;
+  }
+  y=streetW;
+  for(let r=0;r<nBlocksV;r++){
+    ctx.fillStyle=blockColor; ctx.fillRect(0,y,corrX-streetW/2,blockH);
+    ctx.fillRect(corrX+corrW+streetW/2,y,W-corrX-corrW-streetW/2,blockH);
+    ctx.strokeStyle='rgba(21,20,15,0.06)'; ctx.lineWidth=0.5;
+    ctx.strokeRect(0,y,corrX-streetW/2,blockH);
+    ctx.strokeRect(corrX+corrW+streetW/2,y,W-corrX-corrW-streetW/2,blockH);
+    y+=blockH+streetW;
+  }
+  const bldColor='rgba(21,20,15,0.07)'; y=streetW;
+  const bldConfigs=[
+    [[6,6,corrX-24,blockH-14],[corrX+corrW+6,6,W-corrX-corrW-14,blockH-14]],
+    [[6,6,corrX-34,blockH-12],[8,6,W-corrX-corrW-22,blockH-14]],
+    [[6,6,corrX-20,blockH-16],[6,6,W-corrX-corrW-18,blockH-12]],
+    [[6,6,corrX-30,blockH-14],[6,6,W-corrX-corrW-20,blockH-16]],
+    [[6,6,corrX-22,blockH-12],[6,6,W-corrX-corrW-16,blockH-14]],
+  ];
+  for(let r=0;r<nBlocksV;r++){
+    ctx.fillStyle=bldColor; const row=bldConfigs[r]||bldConfigs[0];
+    const lb=row[0]; ctx.fillRect(lb[0],y+lb[1],lb[2],lb[3]);
+    const rb=row[1]; ctx.fillRect(corrX+corrW+rb[0],y+rb[1],rb[2],rb[3]);
+    y+=blockH+streetW;
+  }
+  const b=bands; const pedHalf=b.ped/2;
+  const laneOrder=[
+    {key:'ped',w:pedHalf,fill:'#D2C4A4',label:'pedestrian'},
+    {key:'green',w:b.green,fill:'#6B8A72',label:'green'},
+    {key:'bike',w:b.bike,fill:'#34492F',label:'bike'},
+    {key:'bus',w:b.bus,fill:'#2C4233',label:'transit'},
+    {key:'car',w:b.car,fill:'#46433E',label:'car'},
+    {key:'park',w:b.park,fill:'#4A4640',label:'parking'},
+    {key:'ped2',w:pedHalf,fill:'#D2C4A4',label:'pedestrian'},
+  ];
+  let lx=corrX;
+  for(const lane of laneOrder){
+    const lw=lane.w*corrW; if(lw<0.5){ lx+=lw; continue; }
+    ctx.fillStyle=lane.fill; ctx.fillRect(lx,0,lw,H);
+    if(lane.key==='green'&&lw>4){
+      ctx.fillStyle='rgba(107,138,114,0.35)';
+      for(let dy=8;dy<H;dy+=16){ for(let ddx=3;ddx<lw-3;ddx+=10){ ctx.beginPath(); ctx.arc(lx+ddx,dy,2,0,Math.PI*2); ctx.fill(); } }
+    }
+    if(lw>20){
+      ctx.save(); ctx.translate(lx+lw/2,H/2); ctx.rotate(-Math.PI/2);
+      ctx.font='7px "JetBrains Mono", monospace'; ctx.letterSpacing='0.1em';
+      ctx.fillStyle=(lane.key==='ped'||lane.key==='ped2')?'rgba(120,90,60,0.55)':lane.key==='green'?'rgba(255,255,255,0.65)':'rgba(255,255,255,0.4)';
+      ctx.textAlign='center'; ctx.fillText(lane.label.toUpperCase(),0,3); ctx.restore();
+    }
+    lx+=lw;
+  }
+  ctx.strokeStyle='rgba(21,20,15,0.18)'; ctx.lineWidth=1; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(corrX,0); ctx.lineTo(corrX,H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(corrX+corrW,0); ctx.lineTo(corrX+corrW,H); ctx.stroke();
+  for(const sy of streetRows){
+    ctx.strokeStyle=streetColor; ctx.lineWidth=streetW;
+    ctx.beginPath(); ctx.moveTo(corrX,sy+streetW/2); ctx.lineTo(corrX+corrW,sy+streetW/2); ctx.stroke();
+    ctx.strokeStyle='rgba(21,20,15,0.06)'; ctx.lineWidth=0.8; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(corrX,sy+streetW/2); ctx.lineTo(corrX+corrW,sy+streetW/2); ctx.stroke(); ctx.setLineDash([]);
+  }
+  const streetNames=['E Pike St','E Union St','E Marion St','E Columbia St','E Cherry St','E Jefferson St'];
+  for(let i=0;i<streetRows.length;i++){ ctx.font='7px "JetBrains Mono", monospace'; ctx.fillStyle='rgba(21,20,15,0.35)'; ctx.textAlign='left'; ctx.fillText(streetNames[i]||'',4,streetRows[i]+streetW-3); }
+  ctx.font='bold 8px "JetBrains Mono", monospace'; ctx.fillStyle='rgba(21,20,15,0.4)'; ctx.textAlign='center'; ctx.fillText('12TH AVE',W/2,10);
+  const ax=W-18, ay=18;
+  ctx.strokeStyle='rgba(21,20,15,0.35)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(ax,ay+8); ctx.lineTo(ax,ay-8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ax-3,ay-4); ctx.lineTo(ax,ay-8); ctx.lineTo(ax+3,ay-4); ctx.stroke();
+  ctx.font='7px "JetBrains Mono", monospace'; ctx.fillStyle='rgba(21,20,15,0.35)'; ctx.textAlign='center'; ctx.fillText('N',ax,ay+18);
+}
+
+function getCorridor(){ const corrW=Math.round(W*0.38); const corrX=Math.round((W-corrW)/2); return {x:corrX,w:corrW}; }
+function spawnDot(yd){
+  const corr=getCorridor(); const b=yd.bands; const pedHalf=b.ped/2;
+  const greenW=b.green*corr.w, bikeW=b.bike*corr.w, busW=b.bus*corr.w;
+  const busStart=corr.x+pedHalf*corr.w+greenW+bikeW;
+  const inBus=busW>4;
+  const dotX=inBus?(busStart+Math.random()*busW):(corr.x+corr.w*(0.3+Math.random()*0.4));
+  const goDown=Math.random()>0.5;
+  dots.push({ x:dotX+(Math.random()-0.5)*4, y:goDown?-8:H+8, speed:1.2+Math.random()*1.4, dir:goDown?1:-1, r:2+Math.random()*1.5, alpha:0.7+Math.random()*0.3, color:yd.dotColor, trail:[], age:0, maxAge:H/(1.5+Math.random()) });
+}
+function updateDots(yd){
+  const spawnRate=yd.dotRate/60;
+  if(Math.random()<spawnRate) spawnDot(yd);
+  if(spawnRate>0.5&&Math.random()<spawnRate-0.5) spawnDot(yd);
+  for(let i=dots.length-1;i>=0;i--){ const d=dots[i]; d.y+=d.speed*d.dir; d.age++; d.trail.push({x:d.x,y:d.y}); if(d.trail.length>8) d.trail.shift(); if(d.y<-20||d.y>H+20||d.age>d.maxAge+60) dots.splice(i,1); }
+}
+function drawDots(){
+  for(const d of dots){
+    if(d.trail.length>1){
+      ctx.strokeStyle=d.color.replace(/[\d.]+\)$/,m=>(parseFloat(m)*0.35).toFixed(2)+')');
+      ctx.lineWidth=d.r*0.8; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(d.trail[0].x,d.trail[0].y);
+      for(let j=1;j<d.trail.length;j++) ctx.lineTo(d.trail[j].x,d.trail[j].y); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(d.x,d.y,d.r,0,Math.PI*2); ctx.fillStyle=d.color; ctx.fill();
+  }
+}
+function drawGlow(yd){
+  if(!glowCtx) return;
+  glowCtx.globalCompositeOperation='source-over';
+  for(const d of dots){
+    const g=glowCtx.createRadialGradient(d.x*devicePixelRatio,d.y*devicePixelRatio,0,d.x*devicePixelRatio,d.y*devicePixelRatio,8*devicePixelRatio);
+    const col=yd.dotColor.replace(/[\d.]+\)$/,'0.04)');
+    g.addColorStop(0,col); g.addColorStop(1,'transparent');
+    glowCtx.fillStyle=g; glowCtx.fillRect((d.x-12)*devicePixelRatio,(d.y-12)*devicePixelRatio,24*devicePixelRatio,24*devicePixelRatio);
+  }
+}
+function compositeGlow(){ if(!glowCtx) return; ctx.save(); ctx.globalAlpha=0.55; ctx.drawImage(glowCanvas,0,0,W,H); ctx.restore(); }
+function clearGlow(){ if(!glowCtx) return; glowCtx.clearRect(0,0,glowCanvas.width,glowCanvas.height); }
+
+let lastTime=0, currentBands=yearData[0].bands, targetBands=yearData[0].bands, lerpT=0;
+function lerpBands(a,b,t){ const ease=1-Math.pow(1-t,3); const out={}; for(const k of ['car','park','bus','bike','green','ped']) out[k]=a[k]+(b[k]-a[k])*ease; return out; }
+function drawFrame(ts){
+  if(!ts) ts=0; const dt=ts-lastTime; lastTime=ts;
+  if(glowCanvas.width!==canvas.width||glowCanvas.height!==canvas.height) resizeGlow();
+  const yd=yearData[currentYearIdx];
+  if(lerpT<1){ lerpT=Math.min(lerpT+dt/1200,1); currentBands=lerpBands(currentBands,targetBands,lerpT); }
+  ctx.clearRect(0,0,W,H);
+  drawMap(currentBands);
+  compositeGlow();
+  updateDots(yd); drawGlow(yd); drawDots();
+  animFrame=requestAnimationFrame(drawFrame);
+}
+
+let prevCount=0, countAnim=null;
+function animCounter(to){
+  if(countAnim) cancelAnimationFrame(countAnim);
+  const from=prevCount, dur=2000, t0=performance.now();
+  const el=document.getElementById('big-counter');
+  const tick=ts=>{ const p=Math.min((ts-t0)/dur,1), e=1-Math.pow(1-p,3); const val=Math.round(from+(to-from)*e); el.textContent=val>=1000?val.toLocaleString():val; if(p<1) countAnim=requestAnimationFrame(tick); };
+  countAnim=requestAnimationFrame(tick); prevCount=to;
+}
+
+const GRID=document.getElementById('people-grid');
+for(let i=0;i<20;i++){ const c=document.createElement('div'); c.className='person-chip'; c.style.cssText='background:#5A4E4422;border:1px solid #5A4E4444'; c.textContent='🚗'; GRID.appendChild(c); }
+function renderGrid(yd){
+  const [cars,bus,bike,walk]=yd.people;
+  const icons=[...Array(cars).fill({icon:'🚗',bg:'#5A4E44'}),...Array(bus).fill({icon:'🚊',bg:'#41607D'}),...Array(bike).fill({icon:'🚲',bg:'#4A6B52'}),...Array(walk).fill({icon:'🚶',bg:'#8A6A4A'})];
+  const chips=GRID.querySelectorAll('.person-chip');
+  icons.forEach((p,i)=>{ const chip=chips[i]; if(!chip) return;
+    if(chip.textContent.trim()!==p.icon){ chip.classList.add('flip'); setTimeout(()=>{ chip.textContent=p.icon; chip.style.background=p.bg+'22'; chip.style.borderColor=p.bg+'44'; chip.classList.remove('flip'); },160); }
+  });
+}
+
+let lastIdx=0;
+function renderYear(idx){
+  const yd=yearData[idx];
+  targetBands=yd.bands; lerpT=0;
+  if(idx<lastIdx||idx===0) clearGlow();
+  lastIdx=idx; currentYearIdx=idx;
+  const yearEl=document.getElementById('year-display');
+  yearEl.textContent=yd.year; yearEl.classList.toggle('future',yd.year>=2030);
+  document.getElementById('year-slider').classList.toggle('future-thumb',yd.year>=2030);
+  document.getElementById('ann-year').textContent=yd.year;
+  document.getElementById('ann-text').innerHTML=yd.ann;
+  animCounter(yd.count); renderGrid(yd);
+}
+
+initGlow(); resize(); resizeGlow(); renderYear(0); animCounter(0);
+requestAnimationFrame(drawFrame);
+
+const slider=document.getElementById('year-slider');
+slider.addEventListener('input',()=>renderYear(+slider.value));
+
+/* auto-resize handshake */
+function postH(){ parent.postMessage({pmViz:'the-aggregate', h:document.body.scrollHeight}, '*'); }
+window.addEventListener('load',()=>{ resize(); resizeGlow(); postH(); });
+new ResizeObserver(()=>{ resize(); postH(); }).observe(document.getElementById('map-wrap'));
+new ResizeObserver(postH).observe(document.body);
+</script>
+</body>
+</html>

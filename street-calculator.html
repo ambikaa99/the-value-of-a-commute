@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Street Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --bg2:#F5F5F7; --cream:#F7F5F0; --cream-2:#EFECE4;
+  --text:#1D1D1F; --text-2:#6E6E73; --text-3:#AEAEB2;
+  --border:#D2D2D7; --border2:#E8E8ED;
+  --sage:#4A6B52; --sage-2:#6B8A72; --sage-soft:#DCE6DE; --sage-bg:#EFF4F0;
+  --warn:#B85C3A; --warn-soft:#F5E8E0;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:'Poppins',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:2px}
+
+.card{ background:var(--bg); border:1px solid var(--border2); border-radius:20px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+
+/* header */
+.eh{ padding:22px 28px 20px; background:#1D1D1F; color:#fff; }
+.eh-lbl{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.42); margin-bottom:9px; }
+.eh h3{ font-size:18px; font-weight:500; line-height:1.32; letter-spacing:-.01em; color:#fff; max-width:560px; }
+
+/* body */
+.body{ display:grid; grid-template-columns:0.82fr 1.18fr; }
+.readout{ padding:26px 28px; border-right:1px solid var(--border2); display:flex; flex-direction:column; }
+.ro-lbl{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); margin-bottom:12px; }
+.ro-value{ font-family:'Poppins',sans-serif; font-size:72px; font-weight:600; line-height:.85; letter-spacing:-.03em; color:var(--sage); font-variant-numeric:tabular-nums; }
+.ro-value .u{ display:block; font-size:12px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); margin-top:12px; font-family:'JetBrains Mono',monospace; }
+.ro-value.pulse{ animation:roPulse .5s ease; }
+@keyframes roPulse{ 0%{transform:scale(1)} 30%{transform:scale(1.04)} 100%{transform:scale(1)} }
+
+.m-stats{ margin-top:22px; display:flex; flex-direction:column; border-top:1px solid var(--border2); }
+.m-stat{ display:flex; justify-content:space-between; align-items:baseline; padding:10px 0; border-bottom:1px solid var(--border2); }
+.m-stat-l{ font-size:13px; color:var(--text-2); }
+.m-stat-v{ font-family:'Poppins',sans-serif; font-size:17px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+
+.ro-mean{ margin-top:auto; padding-top:20px; }
+.ro-mean-k{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; }
+.ro-mean-t{ font-size:14px; line-height:1.55; color:var(--text); }
+.ro-mean-t b{ font-weight:600; color:var(--sage); }
+
+/* stage */
+.stage{ background:var(--cream); padding:24px 26px; display:flex; flex-direction:column; }
+.stage-title{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-2); margin-bottom:14px; }
+#scene{ width:100%; height:auto; display:block; border-radius:10px; }
+.people-label{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); margin:16px 0 9px; }
+#people-grid{ display:flex; flex-wrap:wrap; gap:5px; }
+.person-chip{ width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; line-height:1; transition:background .4s,border-color .4s; }
+
+/* moving-vehicle drift + tree sway */
+@keyframes mvDrift{ 0%{transform:translateX(0)} 50%{transform:translateX(4px)} 100%{transform:translateX(0)} }
+@keyframes swayT{ 0%{transform:rotate(-1.2deg)} 50%{transform:rotate(1.2deg)} 100%{transform:rotate(-1.2deg)} }
+.mv{ animation:mvDrift 3.6s ease-in-out infinite; }
+.tr{ transform-box:fill-box; transform-origin:center bottom; animation:swayT 5s ease-in-out infinite; }
+@media (prefers-reduced-motion:reduce){ .mv,.tr{ animation:none; } }
+
+/* dock: mode buttons */
+.dock{ padding:18px 28px 20px; border-top:1px solid var(--border2); }
+.dock-label{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); margin-bottom:11px; }
+#controls{ display:grid; grid-template-columns:repeat(5,1fr); gap:7px; }
+.mode-btn{ font-family:'Poppins',sans-serif; font-size:13px; font-weight:500; letter-spacing:-.01em; padding:11px 6px; border:1px solid var(--border); background:var(--bg); color:var(--text-2); cursor:pointer; transition:all .18s; line-height:1.25; text-align:center; border-radius:100px; }
+.mode-btn:hover{ border-color:var(--text-3); color:var(--text); }
+.mode-btn:active{ transform:scale(.98) }
+.mode-btn.active{ background:#1D1D1F; color:#fff; border-color:#1D1D1F }
+
+#provocation{ text-align:center; font-size:15px; font-weight:500; color:var(--text-2); padding:16px 24px 22px; border-top:1px solid var(--border2); letter-spacing:-.01em; }
+
+@media (max-width:720px){
+  .body{ grid-template-columns:1fr; }
+  .readout{ border-right:none; border-bottom:1px solid var(--border2); }
+  #controls{ grid-template-columns:repeat(3,1fr); }
+  .ro-value{ font-size:60px; }
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="eh">
+    <div class="eh-lbl">Street Calculator · Seattle</div>
+    <h3>The same twenty people, arranged five different ways, each asking for a very different street.</h3>
+  </div>
+
+  <div class="body">
+    <div class="readout">
+      <div class="ro-lbl">Street per person</div>
+      <div class="ro-value" id="m-sqm">47<span class="u">m² per person</span></div>
+      <div class="m-stats">
+        <div class="m-stat"><span class="m-stat-l">Car lanes</span><span class="m-stat-v" id="m-lanes">5</span></div>
+        <div class="m-stat"><span class="m-stat-l">Parking spots</span><span class="m-stat-v" id="m-parking">14</span></div>
+        <div class="m-stat"><span class="m-stat-l">Sidewalk width</span><span class="m-stat-v" id="m-ped">1.2m</span></div>
+      </div>
+      <div class="ro-mean">
+        <div class="ro-mean-k">What this means</div>
+        <div class="ro-mean-t" id="ro-mean">Twenty cars demand five lanes and fourteen parking spots: <b>47 m²</b> of street for every person.</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-title" id="mode-title">20 people in 20 cars</div>
+      <svg id="scene" viewBox="0 0 340 340" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="asp" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+            <rect width="6" height="6" fill="#46433E"/>
+            <circle cx="1.5" cy="2" r=".6" fill="#3C3935" opacity=".8"/>
+            <circle cx="4.5" cy="4.5" r=".5" fill="#524E48" opacity=".6"/>
+          </pattern>
+          <pattern id="swk" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
+            <rect width="14" height="14" fill="#D2C4A4"/>
+            <rect x="0" y="0" width="6.5" height="6.5" fill="#CEC0A0" rx=".5"/>
+            <rect x="7.5" y="7.5" width="6.5" height="6.5" fill="#D6C8A8" rx=".5"/>
+          </pattern>
+          <pattern id="brk" x="0" y="0" width="16" height="8" patternUnits="userSpaceOnUse">
+            <rect width="16" height="8" fill="#C2A98E"/>
+            <rect x="0" y="0" width="7" height="3.5" fill="#CBB294" rx=".3"/>
+            <rect x="9" y="0" width="7" height="3.5" fill="#BAA084" rx=".3"/>
+            <rect x="4" y="4.5" width="8" height="3.3" fill="#C5AC8E" rx=".3"/>
+            <rect x="0" y="4.5" width="3" height="3.3" fill="#B49878" rx=".3"/>
+            <rect x="13" y="4.5" width="3" height="3.3" fill="#BA9C7C" rx=".3"/>
+          </pattern>
+          <pattern id="brk2" x="0" y="0" width="16" height="8" patternUnits="userSpaceOnUse">
+            <rect width="16" height="8" fill="#AC927A"/>
+            <rect x="0" y="0" width="7" height="3.5" fill="#B89E86" rx=".3"/>
+            <rect x="9" y="0" width="7" height="3.5" fill="#A48A70" rx=".3"/>
+            <rect x="4" y="4.5" width="8" height="3.3" fill="#B0967E" rx=".3"/>
+          </pattern>
+        </defs>
+
+        <rect x="0" y="0" width="340" height="28" fill="#DCE2DE"/>
+        <rect x="0" y="24" width="340" height="10" fill="#D6CCB0"/>
+        <rect x="0" y="30" width="340" height="34" fill="url(#brk)"/>
+        <rect x="6"  y="34" width="13" height="9" fill="#8AA0A8" opacity=".55" rx="1"/>
+        <rect x="25" y="34" width="13" height="9" fill="#9AB0B8" opacity=".5" rx="1"/>
+        <rect x="48" y="34" width="13" height="9" fill="#8AA0A8" opacity=".55" rx="1"/>
+        <rect x="68" y="34" width="13" height="9" fill="#9AB0B8" opacity=".5" rx="1"/>
+        <rect x="91" y="34" width="13" height="9" fill="#8AA0A8" opacity=".55" rx="1"/>
+        <rect x="112" y="34" width="13" height="9" fill="#9AB0B8" opacity=".5" rx="1"/>
+        <rect x="135" y="34" width="13" height="9" fill="#8AA0A8" opacity=".55" rx="1"/>
+        <rect x="157" y="34" width="13" height="9" fill="#9AB0B8" opacity=".5" rx="1"/>
+        <rect x="179" y="34" width="13" height="9" fill="#8AA0A8" opacity=".5" rx="1"/>
+        <rect x="200" y="34" width="13" height="9" fill="#9AB0B8" opacity=".55" rx="1"/>
+        <rect x="222" y="34" width="13" height="9" fill="#8AA0A8" opacity=".5" rx="1"/>
+        <rect x="244" y="34" width="13" height="9" fill="#9AB0B8" opacity=".5" rx="1"/>
+        <rect x="266" y="34" width="13" height="9" fill="#8AA0A8" opacity=".55" rx="1"/>
+        <rect x="288" y="34" width="13" height="9" fill="#9AB0B8" opacity=".5" rx="1"/>
+        <rect x="310" y="34" width="13" height="9" fill="#8AA0A8" opacity=".5" rx="1"/>
+        <rect x="0" y="58" width="340" height="4" fill="#9C8866" opacity=".7"/>
+
+        <g id="street-zones"></g>
+        <g id="lane-marks"></g>
+        <g id="street-objs"></g>
+
+        <rect x="0" y="268" width="340" height="4" fill="#9C8866" opacity=".7"/>
+        <rect x="0" y="272" width="340" height="34" fill="url(#brk2)"/>
+        <rect x="6"  y="278" width="13" height="9" fill="#7A9098" opacity=".55" rx="1"/>
+        <rect x="25" y="278" width="13" height="9" fill="#8AA0A8" opacity=".5" rx="1"/>
+        <rect x="48" y="278" width="13" height="9" fill="#7A9098" opacity=".55" rx="1"/>
+        <rect x="72" y="278" width="13" height="9" fill="#8AA0A8" opacity=".5" rx="1"/>
+        <rect x="96" y="278" width="13" height="9" fill="#7A9098" opacity=".55" rx="1"/>
+        <rect x="120" y="278" width="13" height="9" fill="#8AA0A8" opacity=".5" rx="1"/>
+        <rect x="144" y="278" width="13" height="9" fill="#7A9098" opacity=".5" rx="1"/>
+        <rect x="168" y="278" width="13" height="9" fill="#8AA0A8" opacity=".55" rx="1"/>
+        <rect x="192" y="278" width="13" height="9" fill="#7A9098" opacity=".5" rx="1"/>
+        <rect x="216" y="278" width="13" height="9" fill="#8AA0A8" opacity=".55" rx="1"/>
+        <rect x="240" y="278" width="13" height="9" fill="#7A9098" opacity=".5" rx="1"/>
+        <rect x="264" y="278" width="13" height="9" fill="#8AA0A8" opacity=".5" rx="1"/>
+        <rect x="288" y="278" width="13" height="9" fill="#7A9098" opacity=".55" rx="1"/>
+        <rect x="312" y="278" width="13" height="9" fill="#8AA0A8" opacity=".5" rx="1"/>
+        <rect x="18"  y="290" width="40" height="12" fill="#D2DCE2" opacity=".4" rx="1"/>
+        <rect x="78"  y="290" width="40" height="12" fill="#D2DCE2" opacity=".38" rx="1"/>
+        <rect x="150" y="290" width="40" height="12" fill="#D2DCE2" opacity=".4"  rx="1"/>
+        <rect x="218" y="290" width="40" height="12" fill="#D2DCE2" opacity=".38" rx="1"/>
+        <rect x="286" y="290" width="40" height="12" fill="#D2DCE2" opacity=".4"  rx="1"/>
+        <rect x="0" y="302" width="340" height="12" fill="#D6CCB0"/>
+        <rect x="0" y="314" width="340" height="26" fill="#DCE2DE" opacity=".6"/>
+      </svg>
+
+      <div class="people-label">20 people · how they travel</div>
+      <div id="people-grid"></div>
+    </div>
+  </div>
+
+  <div class="dock">
+    <div class="dock-label">Choose how the twenty travel</div>
+    <div id="controls">
+      <button class="mode-btn active" data-mode="0">20 cars</button>
+      <button class="mode-btn" data-mode="1">Mixed</button>
+      <button class="mode-btn" data-mode="2">Bus + bike</button>
+      <button class="mode-btn" data-mode="3">Light rail</button>
+      <button class="mode-btn" data-mode="4">All transit</button>
+    </div>
+  </div>
+
+  <div id="provocation">Same twenty people. Entirely different geometry.</div>
+</div>
+
+<script>
+const W=340, ST=62, SB=268, SH=SB-ST;
+const C={ bus:'#4A6B52', busLane:'#2C4233', bike:'#6B8A72', bikeLane:'#34492F', rail:'#41607D', railLane:'#2C3E52', rail2:'#52708E', green:'#6B8A72', mark:'#8AA890', markRail:'#6080A0', yellow:'#C9A84A' };
+const rd=()=>(Math.random()*4).toFixed(2); // random anim delay
+
+function car(x,y,w,h,color,parked){
+  const ww=w*0.3, wh=h*0.35, wy=y+h*0.12;
+  const wheels=parked?'':`
+    <rect x="${x+1}" y="${y-2}" width="${w*0.18}" height="4" rx="1.5" fill="#1a1a18" opacity=".8"/>
+    <rect x="${x+w-w*0.18-1}" y="${y-2}" width="${w*0.18}" height="4" rx="1.5" fill="#1a1a18" opacity=".8"/>
+    <rect x="${x+1}" y="${y+h-2}" width="${w*0.18}" height="4" rx="1.5" fill="#1a1a18" opacity=".8"/>
+    <rect x="${x+w-w*0.18-1}" y="${y+h-2}" width="${w*0.18}" height="4" rx="1.5" fill="#1a1a18" opacity=".8"/>`;
+  const inner=`
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${color}" opacity=".9"/>
+    <rect x="${x+w*0.1}" y="${wy}" width="${ww}" height="${wh}" rx="1.5" fill="#9abccc" opacity=".4"/>
+    <rect x="${x+w*0.6}" y="${wy}" width="${ww}" height="${wh}" rx="1.5" fill="#9abccc" opacity=".34"/>
+    ${wheels}`;
+  return parked?inner:`<g class="mv" style="animation-delay:${rd()}s">${inner}</g>`;
+}
+function bus(x,y,w,h,color,nPeople){
+  let out=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${color}" opacity=".94"/>`;
+  out+=`<rect x="${x}" y="${y}" width="${w}" height="3" rx="1" fill="${color}" opacity=".5"/>`;
+  out+=`<rect x="${x}" y="${y+2}" width="10" height="${h-4}" rx="1" fill="#fff" opacity=".18"/>`;
+  const winW=14, winH=6, gap=18, nWin=Math.floor((w-20)/gap);
+  for(let i=0;i<nWin;i++){ const wx=x+16+i*gap;
+    out+=`<rect x="${wx}" y="${y+2}" width="${winW}" height="${winH}" rx="1.5" fill="#CFE0D4" opacity=".5"/>`;
+    if(i<nPeople) out+=`<circle cx="${wx+winW/2}" cy="${y+winH/2+2}" r="${winH*0.48}" fill="#C8A870" opacity=".82"/>`;
+  }
+  out+=`<rect x="${x+w-6}" y="${y+3}" width="4" height="${h-6}" rx="1" fill="#B85C3A" opacity=".5"/>`;
+  return `<g class="mv" style="animation-delay:${rd()}s">${out}</g>`;
+}
+function train(x,y,w,h,color,nPeople){
+  let out=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${color}" opacity=".94"/>`;
+  out+=`<rect x="${x}" y="${y+h/2-2}" width="${w}" height="4" fill="${color}" opacity=".35"/>`;
+  out+=`<rect x="${x}" y="${y+3}" width="14" height="${h-6}" rx="3" fill="${color}" opacity=".7"/>`;
+  const winW=18, winH=h-8, gap=22, nWin=Math.floor((w-22)/gap);
+  for(let i=0;i<nWin;i++){ const wx=x+18+i*gap;
+    out+=`<rect x="${wx}" y="${y+4}" width="${winW}" height="${winH}" rx="2" fill="#CADCE6" opacity=".46"/>`;
+    if(i<nPeople) out+=`<circle cx="${wx+winW/2}" cy="${y+h/2}" r="${winH*0.38}" fill="#C8A870" opacity=".82"/>`;
+  }
+  out+=`<rect x="${x+w-10}" y="${y+3}" width="8" height="${h-6}" rx="2" fill="${color}" opacity=".6"/>`;
+  return `<g class="mv" style="animation-delay:${rd()}s">${out}</g>`;
+}
+function bike(x,y,col){
+  return `
+    <circle cx="${x+5}" cy="${y+7}" r="5" fill="none" stroke="${col}" stroke-width="1.8" opacity=".9"/>
+    <circle cx="${x+22}" cy="${y+7}" r="5" fill="none" stroke="${col}" stroke-width="1.8" opacity=".9"/>
+    <line x1="${x+5}" y1="${y+7}" x2="${x+13}" y2="${y+3}" stroke="${col}" stroke-width="1.6" opacity=".88"/>
+    <line x1="${x+13}" y1="${y+3}" x2="${x+22}" y2="${y+7}" stroke="${col}" stroke-width="1.6" opacity=".88"/>
+    <line x1="${x+5}" y1="${y+7}" x2="${x+22}" y2="${y+7}" stroke="${col}" stroke-width="1.2" opacity=".55"/>
+    <line x1="${x+13}" y1="${y+3}" x2="${x+13}" y2="${y-1}" stroke="${col}" stroke-width="1.4" opacity=".7"/>
+    <line x1="${x+10}" y1="${y-1}" x2="${x+16}" y2="${y-1}" stroke="${col}" stroke-width="1.4" opacity=".7"/>
+    <circle cx="${x+13}" cy="${y-5}" r="3.5" fill="#C8A870" opacity=".82"/>`;
+}
+function walker(x,y){
+  return `
+    <circle cx="${x+5}" cy="${y+3}" r="4" fill="#C8A870" opacity=".84"/>
+    <rect x="${x+2}" y="${y+7}" width="6" height="9" rx="2" fill="#A07858" opacity=".8"/>
+    <line x1="${x+2}" y1="${y+11}" x2="${x-1}" y2="${y+17}" stroke="#A07858" stroke-width="2" stroke-linecap="round" opacity=".72"/>
+    <line x1="${x+8}" y1="${y+11}" x2="${x+11}" y2="${y+17}" stroke="#A07858" stroke-width="2" stroke-linecap="round" opacity=".72"/>`;
+}
+function tree(x,y){
+  return `<g class="tr" style="animation-delay:${rd()}s">
+    <rect x="${x-2}" y="${y+7}" width="4" height="8" fill="#8A6A3A" opacity=".9"/>
+    <circle cx="${x}" cy="${y}" r="9" fill="#3B5742" opacity=".82"/>
+    <circle cx="${x}" cy="${y}" r="5.5" fill="#6B8A72" opacity=".72"/></g>`;
+}
+function bench(x,y){
+  return `
+    <rect x="${x}" y="${y}" width="28" height="4" rx="1.5" fill="#8A6A3A" opacity=".8"/>
+    <rect x="${x+2}" y="${y+4}" width="3.5" height="5" fill="#7A5A2A" opacity=".8"/>
+    <rect x="${x+22}" y="${y+4}" width="3.5" height="5" fill="#7A5A2A" opacity=".8"/>`;
+}
+function railTrack(y,laneH){
+  const cy=y+laneH/2, r1=cy-laneH*0.22, r2=cy+laneH*0.22; let out='';
+  for(let x=8;x<W;x+=22) out+=`<rect x="${x}" y="${r1-2}" width="4" height="${r2-r1+4}" rx="1" fill="#5A4A38" opacity=".5"/>`;
+  out+=`<line x1="0" y1="${r1}" x2="${W}" y2="${r1}" stroke="#9098A0" stroke-width="1.5" opacity=".7"/>`;
+  out+=`<line x1="0" y1="${r2}" x2="${W}" y2="${r2}" stroke="#9098A0" stroke-width="1.5" opacity=".7"/>`;
+  return out;
+}
+
+const modes=[
+  { key:'cars', title:'20 people in 20 cars', sqm:47, carLanes:'5', parking:'14', ped:'1.2m',
+    mean:'Twenty cars demand five lanes and fourteen parking spots: <b>47 m²</b> of street for every person.',
+    people:[...Array(20).fill({icon:'🚗',bg:'#5A4E44'})],
+    lanes:[ {y:0,h:18,fill:'url(#swk)'},{y:18,h:3,fill:'#8A7A5A'},{y:21,h:18,fill:'#4A4640'},{y:39,h:30,fill:'url(#asp)'},{y:69,h:30,fill:'#46433E'},{y:99,h:30,fill:'url(#asp)'},{y:129,h:24,fill:'#46433E'},{y:153,h:24,fill:'url(#asp)'},{y:177,h:18,fill:'#4A4640'},{y:195,h:3,fill:'#8A7A5A'},{y:198,h:8,fill:'url(#swk)'} ],
+    markings:[ {y:69,col:'#6A6055',w:1.2},{y:99,col:'#6A6055',w:1.2},{y:129,col:'#6A6055',w:1.2},{y:153,col:'#6A6055',w:1.2},{cy:84,col:C.yellow} ],
+    objects(ST){ let o='';
+      [20,80,148,212,278].forEach(x=>{o+=car(x,ST+23,34,14,'#5A5450',true)});
+      [14,80,150,216,280].forEach(x=>{o+=car(x,ST+179,34,14,'#5A5450',true)});
+      [20,200].forEach(x=>{o+=car(x,ST+43,44,20,'#4A4038',false)});
+      [110,280].forEach(x=>{o+=car(x,ST+73,44,20,'#52463C',false)});
+      [60,240].forEach(x=>{o+=car(x,ST+103,44,20,'#4A4038',false)});
+      [140,310].forEach(x=>{o+=car(x,ST+133,44,20,'#52463C',false)});
+      [30,220].forEach(x=>{o+=car(x,ST+157,40,18,'#4A4038',false)});
+      return o; } },
+  { key:'mixed', title:'Mixed modes', sqm:31, carLanes:'2', parking:'4', ped:'2.4m',
+    mean:'Sharing buses and bikes frees parking and widens sidewalks, dropping street use to <b>31 m²</b> per person.',
+    people:[...Array(8).fill({icon:'🚗',bg:'#5A4E44'}),...Array(6).fill({icon:'🚌',bg:'#4A6B52'}),...Array(4).fill({icon:'🚲',bg:'#6B8A72'}),...Array(2).fill({icon:'🚶',bg:'#8A6A4A'})],
+    lanes:[ {y:0,h:26,fill:'url(#swk)'},{y:26,h:3,fill:'#8A7A5A'},{y:29,h:14,fill:'#4A4640'},{y:43,h:36,fill:'url(#asp)'},{y:79,h:26,fill:C.busLane},{y:105,h:36,fill:'#46433E'},{y:141,h:18,fill:C.bikeLane},{y:159,h:3,fill:'#8A7A5A'},{y:162,h:44,fill:'url(#swk)'} ],
+    markings:[ {y:43,col:C.mark,w:1.5},{y:79,col:C.mark,w:1.5},{y:105,col:C.mark,w:1.5},{y:141,col:C.mark,w:1.8},{cy:61,col:C.yellow} ],
+    objects(ST){ let o='';
+      [16,100,210].forEach(x=>{o+=car(x,ST+31,30,10,'#5A5450',true)});
+      [16,200].forEach(x=>{o+=car(x,ST+47,44,22,'#4A4038',false)});
+      o+=bus(10,ST+81,200,22,C.bus,6);
+      [120,260].forEach(x=>{o+=car(x,ST+109,44,22,'#52463C',false)});
+      [10,80,160,240].forEach(x=>{o+=bike(x,ST+147,C.bike)});
+      [30,310].forEach(x=>{o+=walker(x,ST+168)});
+      return o; } },
+  { key:'transit', title:'Bus + bike', sqm:18, carLanes:'1', parking:'2', ped:'3.8m',
+    mean:'A dedicated bus lane plus protected bikes cut street use to <b>18 m²</b> per person.',
+    people:[...Array(2).fill({icon:'🚗',bg:'#5A4E44'}),...Array(12).fill({icon:'🚌',bg:'#4A6B52'}),...Array(4).fill({icon:'🚲',bg:'#6B8A72'}),...Array(2).fill({icon:'🚶',bg:'#8A6A4A'})],
+    lanes:[ {y:0,h:38,fill:'url(#swk)'},{y:38,h:3,fill:'#8A7A5A'},{y:41,h:20,fill:C.green,opacity:.7},{y:61,h:34,fill:C.busLane},{y:95,h:32,fill:'url(#asp)'},{y:127,h:22,fill:C.bikeLane},{y:149,h:3,fill:'#8A7A5A'},{y:152,h:54,fill:'url(#swk)'} ],
+    markings:[ {y:61,col:C.mark,w:1.5},{y:95,col:C.mark,w:1.5},{y:127,col:C.mark,w:1.8} ],
+    objects(ST){ let o='';
+      [28,88,158,228,300].forEach(x=>{o+=tree(x,ST+50)});
+      [120,260].forEach(x=>{o+=bench(x,ST+52)});
+      o+=bus(8,ST+63,260,28,C.bus,12);
+      o+=car(140,ST+99,44,22,'#524640',false);
+      o+=car(10,ST+99,30,20,'#5A5450',true);
+      [8,80,158,240].forEach(x=>{o+=bike(x,ST+133,C.bike)});
+      [50,280].forEach(x=>{o+=walker(x,ST+160)});
+      return o; } },
+  { key:'rail', title:'Light rail corridor', sqm:7, carLanes:'0', parking:'0', ped:'5.2m',
+    mean:'Light rail moves everyone in a fraction of the footprint: just <b>7 m²</b> per person.',
+    people:[...Array(16).fill({icon:'🚊',bg:'#41607D'}),...Array(2).fill({icon:'🚲',bg:'#6B8A72'}),...Array(2).fill({icon:'🚶',bg:'#8A6A4A'})],
+    lanes:[ {y:0,h:50,fill:'url(#swk)'},{y:50,h:3,fill:'#8A7A5A'},{y:53,h:28,fill:C.railLane},{y:81,h:28,fill:C.railLane},{y:109,h:22,fill:C.bikeLane},{y:131,h:3,fill:'#8A7A5A'},{y:134,h:72,fill:'url(#swk)'} ],
+    markings:[ {y:53,col:C.markRail,w:1.5},{y:81,col:C.markRail,w:1.5},{y:109,col:C.mark,w:1.8} ],
+    objects(ST){ let o='';
+      o+=railTrack(ST+53,28); o+=railTrack(ST+81,28);
+      o+=train(10,ST+55,260,24,C.rail,9);
+      o+=train(60,ST+83,240,24,C.rail2,7);
+      [8,160].forEach(x=>{o+=bike(x,ST+116,C.bike)});
+      [40,110,240,300].forEach(x=>{o+=walker(x,ST+145)});
+      [190,260].forEach(x=>{o+=tree(x,ST+160)});
+      o+=bench(70,ST+162);
+      return o; } },
+  { key:'active', title:'All transit + active', sqm:5, carLanes:'0', parking:'0', ped:'7m',
+    mean:'Transit and active travel reclaim the street: <b>5 m²</b> per person, with 7 m sidewalks.',
+    people:[...Array(12).fill({icon:'🚊',bg:'#41607D'}),...Array(4).fill({icon:'🚲',bg:'#6B8A72'}),...Array(4).fill({icon:'🚶',bg:'#8A6A4A'})],
+    lanes:[ {y:0,h:60,fill:'url(#swk)'},{y:60,h:3,fill:'#8A7A5A'},{y:63,h:36,fill:C.railLane},{y:99,h:24,fill:C.bikeLane},{y:123,h:80,fill:'url(#swk)'} ],
+    markings:[ {y:63,col:C.markRail,w:1.5},{y:99,col:C.mark,w:1.8} ],
+    objects(ST){ let o='';
+      o+=railTrack(ST+63,36);
+      o+=train(8,ST+65,310,30,C.rail,12);
+      [8,90,180,265].forEach(x=>{o+=bike(x,ST+106,C.bike)});
+      [30,110,200,290].forEach(x=>{o+=tree(x,ST+148)});
+      [60,240].forEach(x=>{o+=bench(x,ST+152)});
+      [20,80,150,220,280,320].forEach(x=>{o+=walker(x,ST+160)});
+      [30,160,290].forEach(x=>{o+=tree(x,ST+30)});
+      [100,230].forEach(x=>{o+=walker(x,ST+28)});
+      return o; } }
+];
+
+function svgZones(m){ return m.lanes.map(l=>`<rect x="0" y="${ST+l.y}" width="${W}" height="${l.h}" fill="${l.fill}" opacity="${l.opacity||1}"/>`).join(''); }
+function svgMarkings(m){ return m.markings.map(mk=>{
+  if(mk.cy!==undefined){ let d=''; for(let x=0;x<W;x+=22) d+=`<rect x="${x}" y="${ST+mk.cy-1.5}" width="12" height="3" rx="1" fill="${mk.col}" opacity=".7"/>`; return d; }
+  return `<line x1="0" y1="${ST+mk.y}" x2="${W}" y2="${ST+mk.y}" stroke="${mk.col}" stroke-width="${mk.w}" opacity=".85"/>`;
+}).join(''); }
+function renderGrid(m){ document.getElementById('people-grid').innerHTML=m.people.map(p=>`<div class="person-chip" style="background:${p.bg}22;border:1px solid ${p.bg}44">${p.icon}</div>`).join(''); }
+
+let prevSqm=47;
+function animNum(el,from,to){ const dur=500,t0=performance.now(); const tick=t=>{ const p=Math.min((t-t0)/dur,1),e=1-Math.pow(1-p,3); el.firstChild.textContent=Math.round(from+(to-from)*e); if(p<1) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
+
+let cur=0;
+function render(idx){
+  const m=modes[idx];
+  document.getElementById('street-zones').innerHTML=svgZones(m);
+  document.getElementById('lane-marks').innerHTML=svgMarkings(m);
+  document.getElementById('street-objs').innerHTML=m.objects(ST);
+  const el=document.getElementById('m-sqm'); animNum(el,prevSqm,m.sqm); prevSqm=m.sqm;
+  el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+  document.getElementById('m-lanes').textContent=m.carLanes;
+  document.getElementById('m-parking').textContent=m.parking;
+  document.getElementById('m-ped').textContent=m.ped;
+  document.getElementById('mode-title').textContent=`${m.people.length} people · ${m.title}`;
+  document.getElementById('ro-mean').innerHTML=m.mean;
+  document.querySelectorAll('.mode-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  renderGrid(m); cur=idx;
+}
+render(0);
+document.querySelectorAll('.mode-btn').forEach(btn=>{ btn.addEventListener('click',()=>render(+btn.dataset.mode)); });
+
+/* auto-resize handshake */
+function postH(){ parent.postMessage({pmViz:'street-calculator', h:document.body.scrollHeight}, '*'); }
+window.addEventListener('load',postH);
+new ResizeObserver(postH).observe(document.body);
+</script>
+</body>
+</html>
