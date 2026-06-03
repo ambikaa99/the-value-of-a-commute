@@ -3404,6 +3404,9 @@
     .pm-interact-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); border: 1px solid var(--border2); border-radius: 999px; padding: 7px 15px; margin: 0 auto 26px; }
     .pm-interact-eyebrow .pm-ie-arrow { font-size: 13px; color: var(--text-2); letter-spacing: 0; }
     .pm-cap-p { font-size: 17px; color: var(--text-2); line-height: 1.72; max-width: 640px; margin: 0 auto; }
+    /* first policymaker caption acts as the page intro — matched to the Designer intro hero */
+    .pm-cap.intro .pm-cap-h { font-size: clamp(30px,4.6vw,54px); font-weight: 700; letter-spacing: -.022em; line-height: 1.14; max-width: 720px; }
+    .pm-cap.intro .pm-cap-p { font-size: 18px; max-width: 580px; }
     .pm-frame-wrap { max-width: 1040px; margin: 0 auto; }
     .pm-frame { width: 100%; border: none; display: block; height: 640px; transition: height .25s ease; }
     @media (max-width: 760px){ .pm-viz-sec .sec-in { padding-left: 20px; padding-right: 20px; } }
@@ -3696,6 +3699,14 @@ Adjust the dials and see what everyday choices add up to over a year, for you an
 
 <!-- FOR DESIGNERS -->
 <div class="audience-sections" data-audience="1">
+<section class="sec pm-intro-sec" data-screen-label="Designer intro">
+  <div class="sec-in">
+    <div class="pm-intro">
+      <h2 class="pm-intro-h">If transportation decisions affect our health, relationships, and routines, where can design show up?</h2>
+      <p class="pm-intro-sub">Transportation decisions are rarely just about transportation. They are also decisions about time, energy, health, and relationships.</p>
+    </div>
+  </div>
+</section>
 <div class="dz-wrap">
 <div class="dz-stack">
 
@@ -3905,7 +3916,7 @@ Adjust the dials and see what everyday choices add up to over a year, for you an
     <div class="dz-split">
       <div class="dz-text">
         <div class="dz-eyebrow">02 · ROUTE CHOICE</div>
-        <h2 class="dz-h">What if people could choose the kind of journey they wanted?</h2>
+        <h2 class="dz-h">What if routes showed what you gain and what you give up?</h2>
         <div class="dz-block">
           <div class="dz-sub-lbl">Research signal</div>
           <p class="dz-lead">People regularly made tradeoffs between:</p>
@@ -4379,7 +4390,7 @@ Adjust the dials and see what everyday choices add up to over a year, for you an
         </div>
         <div class="dz-block">
           <div class="dz-sub-lbl">Design principle</div>
-          <p class="dz-principle-txt">Support accumulation through small actions.</p>
+          <p class="dz-principle-txt">Support larger health goals through small actions.</p>
         </div>
       </div>
       <div class="dz-stage">
@@ -4640,6 +4651,11 @@ Adjust the dials and see what everyday choices add up to over a year, for you an
     </div>
   </div>
 
+  <div class="manifesto sec" data-screen-label="Designer closing">
+    <div style="max-width:680px;margin:0 auto;text-align:center">
+      <h2 class="manifesto-h">If products can optimize for engagement, <span style="color:var(--sage)">what else</span> could they optimize for?</h2>
+    </div>
+  </div>
 </div><!-- /dz-stack -->
 </div><!-- /dz-wrap -->
 </div><!-- /designers -->
@@ -4654,13 +4670,12 @@ Adjust the dials and see what everyday choices add up to over a year, for you an
 
   <section class="sec pm-viz-sec">
     <div class="sec-in">
-      <div class="pm-cap">
-        <div class="pm-interact-eyebrow"><span class="pm-ie-arrow">&#8596;</span>Interactive &middot; drag the sliders and switch views to explore</div>
+      <div class="pm-cap intro">
         <h3 class="pm-cap-h">If individual choices changed, what could cities start seeing differently?</h3>
         <p class="pm-cap-p">Small shifts in how people travel can add up to measurable changes across congestion, transit use, emissions, and public health.</p>
       </div>
       <div class="pm-frame-wrap">
-        <iframe class="pm-frame" data-viz="scenario-explorer" src="scenario-explorer.html" title="Model a transit shift against real corridor data" scrolling="no" loading="lazy"></iframe>
+        <iframe class="pm-frame" data-viz="scenario-explorer" src="policymakers/scenario-explorer.html" title="Model a transit shift against real corridor data" scrolling="no" loading="lazy"></iframe>
       </div>
     </div>
   </section>
@@ -4671,7 +4686,7 @@ Adjust the dials and see what everyday choices add up to over a year, for you an
         <p class="pm-cap-p">The same corridor can move the same number of people while creating entirely different experiences for a city. What should transportation infrastructure optimize for beyond vehicle throughput?</p>
       </div>
       <div class="pm-frame-wrap">
-        <iframe class="pm-frame" data-viz="street-calculator" src="street-calculator.html" title="The same twenty people ask for very different streets" scrolling="no" loading="lazy"></iframe>
+        <iframe class="pm-frame" data-viz="street-calculator" src="policymakers/street-calculator.html" title="The same twenty people ask for very different streets" scrolling="no" loading="lazy"></iframe>
       </div>
     </div>
   </section>
@@ -4682,26 +4697,23 @@ Adjust the dials and see what everyday choices add up to over a year, for you an
         <p class="pm-cap-p">Transportation investments often shape behavior for decades. How might policymakers evaluate decisions not only through immediate outcomes, but through the futures they help create?</p>
       </div>
       <div class="pm-frame-wrap">
-        <iframe class="pm-frame" data-viz="the-aggregate" src="the-aggregate.html" title="A corridor that was decided, not designed" scrolling="no" loading="lazy"></iframe>
+        <iframe class="pm-frame" data-viz="the-aggregate" src="policymakers/the-aggregate.html" title="A corridor that was decided, not designed" scrolling="no" loading="lazy"></iframe>
       </div>
     </div>
   </section>
 
+<div class="manifesto sec" data-screen-label="Policymaker closing">
+  <div style="max-width:680px;margin:0 auto;text-align:center">
+    <h2 class="manifesto-h">What <span style="color:var(--sage)">city</span> are we building through the choices we make <span style="color:var(--sage)">today</span>?</h2>
+  </div>
+</div>
 </div><!-- /policymakers -->
 
 
 <!-- ══ SHARED FINAL SECTION ══════════════ -->
 <div class="manifesto sec gated">
   <div style="max-width:680px;margin:0 auto;text-align:center">
-    <h2 class="manifesto-h">Maybe the future of mobility is not about getting somewhere faster.</h2>
-    <p style="font-size:20px;font-weight:500;color:var(--text-2);margin-bottom:28px;line-height:1.6">Maybe it is about:</p>
-    <ul style="list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:48px">
-      <li style="font-size:20px;color:var(--text-2);line-height:1.6">arriving calmer,</li>
-      <li style="font-size:20px;color:var(--text-2);line-height:1.6">protecting attention,</li>
-      <li style="font-size:20px;color:var(--text-2);line-height:1.6">reducing invisible stress,</li>
-      <li style="font-size:20px;color:var(--text-2);line-height:1.6">and creating time that gives something back.</li>
-    </ul>
-    <p style="font-size:20px;font-weight:500;color:var(--text);line-height:1.65;max-width:560px;margin:0 auto">Because time was never neutral.<br><span style="color:var(--text-2)">We just built systems that treated it that way.</span></p>
+    <h2 class="manifesto-h" id="manifestoH">If commute shapes how we <span style="color:var(--sage)">feel</span>, <span style="color:var(--sage)">think</span>, <span style="color:var(--sage)">connect</span>, and <span style="color:var(--sage)">recover</span>, should getting there be the only thing that matters?</h2>
   </div>
 </div>
 
